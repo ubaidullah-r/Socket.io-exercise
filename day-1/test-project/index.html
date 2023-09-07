@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    
+</head>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    let socket = io();
+    //using send function in server  to consume message here on client
+    // socket.on('message', (data)=>{
+    //     document.write(data);
+
+    // });
+
+    //using custom event to send message to client using emit on server
+    // socket.on('customEvent', (data) =>{
+    //     document.write(data.description);
+    // });
+
+    //now sending message to server from client using custom event
+    // socket.emit('clientEvent', 'client send an custom event named as clientEvent');
+
+    // socket.on('newClientEvent', (data)=>{
+    //     document.body.innerHTML = "";
+    //     document.write(data.description);
+    // })
+
+    let customSocket = io('/my-namespace');
+    customSocket.on("Hi",(data) => {
+        document.body.innerHTML = "";
+        document.write(data);
+
+    }); 
+
+</script>
+<body>
+    <h1>hello world</h1>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Socket.IO Chat</title>
+</head>
+<body>
+  <h1>Default Chat Room</h1>
+  <ul id="default-chat"></ul>
+  <input id="default-message" autocomplete="off" /><button onclick="sendDefaultMessage()">Send</button>
+
+  <hr>
+
+  <h1>Admin Chat Room</h1>
+  <ul id="admin-chat"></ul>
+  <input id="admin-message" autocomplete="off" /><button onclick="sendAdminMessage()">Send</button>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const defaultSocket = io(); // Default namespace
+    const adminSocket = io('/admin'); // Custom namespace for admin chat
+
+    function sendDefaultMessage() {
+      const message = document.getElementById('default-message').value;
+      defaultSocket.emit('chat message', message);
+      document.getElementById('default-message').value = '';
+    }
+
+    function sendAdminMessage() {
+      const message = document.getElementById('admin-message').value;
+      adminSocket.emit('admin message', message);
+      document.getElementById('admin-message').value = '';
+    }
+
+    defaultSocket.on('chat message', (message) => {
+      const li = document.createElement('li');
+      li.textContent = message;
+      document.getElementById('default-chat').appendChild(li);
+    });
+
+    adminSocket.on('admin message', (message) => {
+      const li = document.createElement('li');
+      li.textContent = message;
+      document.getElementById('admin-chat').appendChild(li);
+    });
+  </script>
+</body>
+</html>
