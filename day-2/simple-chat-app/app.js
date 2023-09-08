@@ -1,6 +1,6 @@
-var app = require('express')();
-var http = require('http').Server(app);
-var io = require('socket.io')(http);
+let app = require('express')();
+let http = require('http').Server(app);
+let io = require('socket.io')(http);
 
 app.get('/', function(req, res){
    res.sendFile('C:/Users/lenovo/socketIO/day-2/simple-chat-app/index.html');});
@@ -17,7 +17,7 @@ io.on('connection', function(socket){
       }
    });
    socket.on('msg', function(data){
-      //Send message to everyone
+      //Send message to everyone in chat room 
       io.sockets.emit('newmsg', data);
    })
 });
