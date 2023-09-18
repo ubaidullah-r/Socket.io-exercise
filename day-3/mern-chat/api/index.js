@@ -98,7 +98,7 @@ app.post('/register', async (req, res) => {
 
     }catch (err) {
       console.error(err);
-      res.status(500).json({ message: 'login failed' });
+      res.status(500).json({ message: 'login failed,try again' });
     }
 
 
@@ -110,12 +110,36 @@ app.post('/register', async (req, res) => {
 
 
 const server = app.listen('4000', ()=>{
-    console.log("app is listening on port 4000");
+    console.log("app is listening on port of web 4000");
 });
 
 const wss = new  ws.WebSocketServer({server});
 
-wss.on('connection',()=>{
+wss.on('connection',(connection,req)=>{
+  const cookies = req.headers.cookie;
+  if(cookies){
+    const tokenCookieString = cookies.split(';').find(str => str.startsWith('token'));
+    if(tokenCookieString){
+      const token = tokenCookieString.split('=')[1];
+      if(token){
+        jwt.verify(token, jwtSecret, {}, (err, userData)=>{
+          if(err){ 
+            throw err
+           }
+           const {userId, username} = userData;
+           connection.username = username;
+           connection.userId = userId;
 
-  console.log("connected to websocket server")
+        });
+        
+      }
+    }
+  }
+  [...wss.clients].forEach(client => {
+
+    client.send(JSON.stringify({
+      online:[...wss.clients].map(c => ({userId:c.userId, username:c.username}))
+
+    }));
+  });
 });
