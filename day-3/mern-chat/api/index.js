@@ -3,6 +3,7 @@ require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const User = require('./models/User');
+const Message = require('./models/Message')
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
@@ -116,6 +117,7 @@ const server = app.listen('4000', ()=>{
 const wss = new  ws.WebSocketServer({server});
 
 wss.on('connection',(connection,req)=>{
+  //read the username and id from cookie when someone connects
   const cookies = req.headers.cookie;
   if(cookies){
     const tokenCookieString = cookies.split(';').find(str => str.startsWith('token'));
@@ -135,6 +137,32 @@ wss.on('connection',(connection,req)=>{
       }
     }
   }
+
+  connection.on('message', async (message) => {
+    const messageData = JSON.parse(message.toString());
+    const{recipient, text} = messageData;
+    if(recipient, text){
+      const messageDoc = await Message.create({
+        sender:connection.userId,
+        recipient,
+        text,
+
+      });
+
+      [...wss.clients]
+      .filter(c => c.userId === recipient)
+      .forEach(c => c.send(JSON.stringify({
+        id:messageDoc._id,
+        text, 
+        sender:connection.userId,
+        recipient,
+        
+      })))
+
+      }
+  });
+
+  //notify everyone about online people(when someone connects)
   [...wss.clients].forEach(client => {
 
     client.send(JSON.stringify({
