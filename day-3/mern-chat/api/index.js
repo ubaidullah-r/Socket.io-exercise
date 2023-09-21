@@ -8,6 +8,8 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 const ws = require('ws');
+const { v4: uuidv4 } = require('uuid');
+
 
 
 
@@ -35,6 +37,32 @@ app.get('/test', (req,res) => {
 
 
     res.json("test,okk");
+});
+
+async function getUserDataFromRequest(req){
+  return new Promise((resolve, reject)=>{
+    const token = req.cookies?.token;
+    if(token){
+    jwt.verify(token, jwtSecret,{}, (err, userData)=>{
+      if (err) throw err;
+      resolve(userData);
+
+    });
+  }else{
+    reject('no token');
+  }
+
+  });
+}
+app.get('/messages/:userId', async(req,res)=>{
+  const {userId} = req.params;
+  const userData = await getUserDataFromRequest(req);
+  const ourUserId = userData.userId;
+  const messages = await Message.find({
+    sender: {$in:[userId, ourUserId]},
+    recipient: {$in:[userId, ourUserId]},
+  }).sort({createdAt: 1})
+  res.json(messages);
 });
 app.get('/profile', (req, res)=>{
   const token = req.cookies?.token;
@@ -146,6 +174,7 @@ wss.on('connection',(connection,req)=>{
         sender:connection.userId,
         recipient,
         text,
+        id:uuidv4(),
 
       });
 
@@ -159,7 +188,14 @@ wss.on('connection',(connection,req)=>{
         
       })))
 
+
       }
+      // return messageData
+
+      // Send a response back to the client
+    ws.send({ data: messageDoc });
+
+
   });
 
   //notify everyone about online people(when someone connects)
