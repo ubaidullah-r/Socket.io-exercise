@@ -64,6 +64,13 @@ app.get('/messages/:userId', async(req,res)=>{
   }).sort({createdAt: 1})
   res.json(messages);
 });
+
+app.get('/people', async(req,res) => {
+  const users = await User.find({},{'_id':1, username:1});
+  res.json(users);
+
+})
+
 app.get('/profile', (req, res)=>{
   const token = req.cookies?.token;
   if(token){
@@ -174,15 +181,15 @@ wss.on('connection',(connection,req)=>{
         sender:connection.userId,
         recipient,
         text,
-        id:uuidv4(),
+        //id:uuidv4(),
 
       });
 
       [...wss.clients]
       .filter(c => c.userId === recipient)
       .forEach(c => c.send(JSON.stringify({
-        id:messageDoc._id,
-        text, 
+        _id:messageDoc._id,
+        text,   
         sender:connection.userId,
         recipient,
         
@@ -190,10 +197,8 @@ wss.on('connection',(connection,req)=>{
 
 
       }
-      // return messageData
-
-      // Send a response back to the client
-    ws.send({ data: messageDoc });
+    
+   
 
 
   });
@@ -206,4 +211,9 @@ wss.on('connection',(connection,req)=>{
 
     }));
   });
+});
+
+wss.on('close',(data)=>{
+  console.log("diconnect", data);
+
 });

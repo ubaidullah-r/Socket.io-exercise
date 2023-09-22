@@ -5,34 +5,31 @@ import UserContext from "./UserContext";
 import { uniqBy } from "lodash";
 import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
+import Contact from "./Contact";
 
 const Chat = () => {
   const [ws, setWs] = useState(null);
   const [onlinePeople, setOnlinePeople] = useState({});
+  const [offlinePeoples, setOfflinePeoples] = useState({});
   const [selectedUserId, setSelectedUserId] = useState(null);
   const { username, id } = useContext(UserContext);
   const [newMessageText, setNewMessageText] = useState("");
   const [messages, setMessages] = useState([]);
-  
+
   const divUnderMessages = useRef();
   useEffect(() => {
     connectToWs();
-    
   }, []);
-  function connectToWs(){
+  function connectToWs() {
     const ws = new WebSocket("ws://localhost:4000");
     setWs(ws);
     ws.addEventListener("message", handleMessage);
-    ws.addEventListener("close", ()=>{
-
+    ws.addEventListener("close", () => {
       setTimeout(() => {
-        console.log("disconnect trying to connect")
+        console.log("disconnect trying to connect");
         connectToWs();
-        
       }, 1000);
-      
-    })
-
+    });
   }
   const showOnlinePeople = (peopleArray) => {
     const people = {};
@@ -52,77 +49,92 @@ const Chat = () => {
   };
   const sendMessage = (ev) => {
     ev.preventDefault();
-    const resp = ws.send(
+    ws.send(
       JSON.stringify({
         recipient: selectedUserId,
         text: newMessageText,
-        
       })
-      
     );
-    console.log({resp});
+
     setNewMessageText("");
 
     setMessages((prev) => [
       ...prev,
       {
         text: newMessageText,
-        id: uuidv4(),
         isOur: true,
         sender: id,
         recipient: selectedUserId,
+        _id: Date.now(),
       },
     ]);
-
   };
 
-  useEffect(()=>{
+  useEffect(() => {
     const div = divUnderMessages.current;
-    if(div){
-      div.scrollIntoView({behavior:'smooth', block:'end'}); 
-
+    if (div) {
+      div.scrollIntoView({ behavior: "smooth", block: "end" });
     }
+  }, [messages]);
 
-  },[messages])
+  useEffect(() => {
+    axios.get("/people").then((res) => {
+      const offlinePeople = res.data
+        .filter((p) => p._id !== id)
+        .filter((p) => !Object.keys(onlinePeople).includes(p._id));
+      const offlinePeopleObject = {};
 
-  useEffect(()=>{
-    if(selectedUserId){
-      axios.get('/messages/'+selectedUserId).then(res =>{
+      offlinePeople.forEach((obj) => {
+        offlinePeopleObject[obj._id] = obj.username;
+      });
+      
+      setOfflinePeoples(offlinePeopleObject);
+     
+    
+    });
+  }, [onlinePeople]);
+ 
+  
+
+  useEffect(() => {
+    if (selectedUserId) {
+      axios.get("/messages/" + selectedUserId).then((res) => {
         console.log(res.data);
         setMessages(res.data);
-
       });
-
     }
-
-  },[selectedUserId])
+  }, [selectedUserId]);
 
   const onlinePeopleExclOurUser = { ...onlinePeople };
   delete onlinePeopleExclOurUser[id];
 
-  const messagesWithoutDupes = uniqBy(messages, "id");
+  const messagesWithoutDupes = uniqBy(messages, "_id");
 
   return (
     <div className="flex h-screen">
       <div className="bg-white-100 w-1/3">
         <Logo />
         {Object.keys(onlinePeopleExclOurUser).map((userId) => (
-          <div
-            key={userId}
-            onClick={() => setSelectedUserId(userId)}
-            className={
-              "border-b border-gray-100 flex items-center gap-2 cursor-pointer " +
-              (userId === selectedUserId ? "bg-blue-50" : "")
-            }
-          >
-            {userId === selectedUserId && (
-              <div className="w-1 bg-blue-500 h-12 rounded-r-md"></div>
-            )}
-            <div className="flex gap-2 py-2 pl-4 items-center">
-              <Avatar username={onlinePeople[userId]} userId={userId} />
-              <span className="text-gray-800">{onlinePeople[userId]}</span>
-            </div>
-          </div>
+          <Contact 
+          key={userId}
+          id={userId}
+          online={true}
+          username={onlinePeopleExclOurUser[userId]}  
+          onClick={()=>selectedUserId(id)}
+          selected = {userId === selectedUserId} 
+          />
+    
+        ))}
+        {Object.keys(offlinePeoples).map((userId) => (
+          <Contact 
+          key={userId}
+          id={userId}
+          online={false}
+          username={offlinePeoples[userId]}
+          onClick={()=>selectedUserId(id)}
+          selected = {userId === selectedUserId} 
+          />
+    
         ))}
       </div>
       <div className="flex flex-col bg-blue-50 w-2/3 p-2">
@@ -136,33 +148,29 @@ const Chat = () => {
           )}
           {!!selectedUserId && (
             <div className="relative h-full">
-            <div className="overflow-y-scroll absolute top-0 left-0 right-0 bottom-2">
-              {messagesWithoutDupes.map((message) => (
-                <div
-                  className={
-                    message.sender === id ? "text-right" : "text-left"
-                  }
-                >
+              <div className="overflow-y-scroll absolute top-0 left-0 right-0 bottom-2">
+                {messagesWithoutDupes.map((message) => (
                   <div
+                    key={message._id}
                     className={
-                      "text-left inline-block p-2 my-2 rounded-md text-sm " +
-                      (message.sender === id
-                        ? "bg-blue-500 text-white"
-                        : "bg-white text-gray-500")
+                      message.sender === id ? "text-right" : "text-left"
                     }
                   >
-                    sender: {message.sender}
-                    <br />
-                    my id: {id}
-                    <br />
-                    {message.text}
+                    <div
+                      className={
+                        "text-left inline-block p-2 my-2 rounded-md text-sm max-w-lg " +
+                        (message.sender === id
+                          ? "bg-blue-500 text-white"
+                          : "bg-white text-gray-500")
+                      }
+                    >
+                      {message.text}
+                    </div>
                   </div>
-                </div>
-              ))}
-              <div ref={divUnderMessages}></div>
+                ))}
+                <div ref={divUnderMessages}></div>
+              </div>
             </div>
-          </div>
-          
           )}
         </div>
         {!!selectedUserId && (
